@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut days = DAYS.to_vec();
     days.sort_by_key(|(d, _f)| *d);
 
+    let overall_start = Instant::now();
     for (i, (day, runner)) in days.into_iter().enumerate() {
         if i != 0 {
             println!();
@@ -50,6 +51,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         runner(&input);
     }
+    let total_time = overall_start.elapsed();
+    println!();
+    println!("Total time: {:.2?}", total_time);
     Ok(())
 }
 

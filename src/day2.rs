@@ -94,11 +94,9 @@ pub fn generator(s: &str) -> Vec<Round> {
 fn score(mine: RPS, yours: RPS) -> u32 {
     let diff = mine as i8 - yours as i8;
     let outcome = match diff {
-        -2 => Outcome::Win,
-        -1 => Outcome::Lose,
         0 => Outcome::Draw,
-        1 => Outcome::Win,
-        2 => Outcome::Lose,
+        -2 | 1 => Outcome::Win,
+        -1 | 2 => Outcome::Lose,
         _ => unreachable!(),
     };
     let value = u32::from(mine.value());
