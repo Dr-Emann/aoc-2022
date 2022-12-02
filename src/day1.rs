@@ -1,3 +1,5 @@
+use std::mem;
+
 #[derive(Debug)]
 pub struct Groups(Vec<u32>);
 
@@ -32,4 +34,3 @@ pub fn part_2(groups: &Groups) -> u32 {
     groups.select_nth_unstable(len - 3);
     groups[len - 3..].iter().sum()
 }
-use std::mem;

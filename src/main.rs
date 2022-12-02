@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use std::{fs, panic};
 
+// TODO: This doesn't need linkme or anything
 day!(day1);
+day!(day2);
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -66,6 +68,7 @@ fn verify_args() {
     Args::command().debug_assert()
 }
 
+#[allow(dead_code)]
 fn unimplemented_part<I>(_input: &I) -> &'static str {
     "Unimplemented"
 }
