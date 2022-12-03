@@ -23,11 +23,22 @@ struct Args {
     /// Try to load demo input
     #[arg(short, long)]
     demo: bool,
+
+    #[arg(short, long, conflicts_with = "day")]
+    latest: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    if let Some(day) = args.day {
+    let single_day = args.day.or_else(|| {
+        if args.latest {
+            Some(latest_day())
+        } else {
+            None
+        }
+    });
+    if let Some(day) = single_day {
+        println!("Day {day}");
         let input_path = args.input.unwrap_or_else(|| input_for_day(day, args.demo));
         let input = fs::read_to_string(input_path)?;
 
@@ -55,6 +66,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
     println!("Total time: {:.2?}", total_time);
     Ok(())
+}
+
+fn latest_day() -> u32 {
+    DAYS.iter().map(|(d, _)| *d).max().unwrap()
 }
 
 fn find_day(day: u32) -> Option<fn(&str)> {
