@@ -106,7 +106,23 @@ macro_rules! day {
             use $mod_name::*;
 
             fn run_day(s: &str) {
-                $crate::run_day($gen, $part1, $part2, s);
+                let (gen_elapsed, input) = $crate::time(|| $gen(s));
+                let input = match input {
+                    Ok(i) => i,
+                    Err(e) => {
+                        println!("Generator error: {e}");
+                        return;
+                    }
+                };
+                let (p1_elapsed, p1_result) = $crate::time(|| $part1(&input));
+                let (p2_elapsed, p2_result) = $crate::time(|| $part2(&input));
+
+                let p1_result = $crate::stringify_res(p1_result);
+                let p2_result = $crate::stringify_res(p2_result);
+
+                println!("Gen    ({:.2?})", gen_elapsed);
+                println!("Part 1 ({:.2?}) {p1_result}", p1_elapsed);
+                println!("Part 2 ({:.2?}) {p2_result}", p2_elapsed);
             }
 
             #[linkme::distributed_slice($crate::DAYS)]
@@ -168,37 +184,6 @@ fn stringify_res<T: Display, E: Display>(r: Result<T, E>) -> String {
         Ok(t) => t.to_string(),
         Err(e) => e.to_string(),
     }
-}
-
-fn run_day<'a, I, Gen, O1, P1, O2, P2>(gen: Gen, p1: P1, p2: P2, s: &'a str)
-where
-    I: 'a + panic::RefUnwindSafe,
-    Gen: FnOnce(&'a str) -> I,
-    Gen: panic::UnwindSafe,
-    P1: FnOnce(&I) -> O1,
-    P1: panic::UnwindSafe,
-    P2: FnOnce(&I) -> O2,
-    P2: panic::UnwindSafe,
-    O1: Display,
-    O2: Display,
-{
-    let (gen_elapsed, input) = time(|| gen(s));
-    let input = match input {
-        Ok(i) => i,
-        Err(e) => {
-            println!("Generator error: {e}");
-            return;
-        }
-    };
-    let (p1_elapsed, p1_result) = time(|| p1(&input));
-    let (p2_elapsed, p2_result) = time(|| p2(&input));
-
-    let p1_result = stringify_res(p1_result);
-    let p2_result = stringify_res(p2_result);
-
-    println!("Gen    ({:.2?})", gen_elapsed);
-    println!("Part 1 ({:.2?}) {p1_result}", p1_elapsed);
-    println!("Part 2 ({:.2?}) {p2_result}", p2_elapsed);
 }
 
 #[test]

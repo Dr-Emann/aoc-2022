@@ -103,7 +103,7 @@ fn score(mine: RPS, yours: RPS) -> u32 {
     value + u32::from(outcome as u8)
 }
 
-pub fn part_1(input: &Vec<Round>) -> u32 {
+pub fn part_1(input: &[Round]) -> u32 {
     input
         .iter()
         .copied()
@@ -111,7 +111,7 @@ pub fn part_1(input: &Vec<Round>) -> u32 {
         .sum()
 }
 
-pub fn part_2(input: &Vec<Round>) -> u32 {
+pub fn part_2(input: &[Round]) -> u32 {
     input
         .iter()
         .copied()

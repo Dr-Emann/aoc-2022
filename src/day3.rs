@@ -11,7 +11,7 @@ pub fn generator(s: &str) -> Vec<Rucksack> {
     s.lines().map(|line| Rucksack(line.as_bytes())).collect()
 }
 
-pub fn part_1(bags: &Vec<Rucksack>) -> u32 {
+pub fn part_1(bags: &[Rucksack]) -> u32 {
     let mut total_score = 0;
     for (left, right) in bags.iter().copied().map(Rucksack::split) {
         let common_item = find_common_item(left, right);
@@ -20,7 +20,7 @@ pub fn part_1(bags: &Vec<Rucksack>) -> u32 {
     total_score
 }
 
-pub fn part_2(bags: &Vec<Rucksack>) -> u32 {
+pub fn part_2(bags: &[Rucksack]) -> u32 {
     let mut total_score = 0;
     for chunk in bags.chunks_exact(3) {
         let &[left, middle, right] = chunk else { unreachable!()};
