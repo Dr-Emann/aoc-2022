@@ -124,6 +124,7 @@ macro_rules! day {
                 println!("Gen    ({:.2?})", gen_elapsed);
                 println!("Part 1 ({:.2?}) {p1_result}", p1_elapsed);
                 println!("Part 2 ({:.2?}) {p2_result}", p2_elapsed);
+                println!("Total  ({:.2?})", gen_elapsed + p1_elapsed + p2_elapsed);
             }
 
             #[linkme::distributed_slice($crate::DAYS)]
