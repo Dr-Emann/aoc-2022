@@ -9,6 +9,7 @@ use std::{fs, panic};
 day!(day1);
 day!(day2);
 day!(day3);
+day!(day4);
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
