@@ -10,12 +10,12 @@ fn parse_range(s: &str) -> Range {
 }
 
 pub fn generator(s: &str) -> Vec<Pair> {
-    s.lines()
-        .map(|line| {
-            let (l, r) = line.split_once(',').unwrap();
-            (parse_range(l), parse_range(r))
-        })
-        .collect()
+    let mut result = Vec::with_capacity(1024);
+    s.lines().for_each(|line| {
+        let (l, r) = line.split_once(',').unwrap();
+        result.push((parse_range(l), parse_range(r)))
+    });
+    result
 }
 
 pub fn part_1(assignments: &[Pair]) -> usize {

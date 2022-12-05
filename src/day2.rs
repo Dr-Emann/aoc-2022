@@ -85,10 +85,11 @@ impl Round {
 
 pub fn generator(s: &str) -> Vec<Round> {
     assert_eq!(s.len() % 4, 0);
+    let mut result = Vec::with_capacity(1024);
     s.as_bytes()
         .chunks_exact(4)
-        .map(|chunk| Round::from_abc_xyz(chunk[0], chunk[2]))
-        .collect()
+        .for_each(|chunk| result.push(Round::from_abc_xyz(chunk[0], chunk[2])));
+    result
 }
 
 fn score(mine: RPS, yours: RPS) -> u32 {

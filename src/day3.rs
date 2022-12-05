@@ -43,7 +43,10 @@ fn priority_from_set(set: u64) -> u32 {
 }
 
 pub fn generator(s: &str) -> Vec<Rucksack> {
-    s.lines().map(|line| Rucksack(line.as_bytes())).collect()
+    let mut result = Vec::with_capacity(1024);
+    s.lines()
+        .for_each(|line| result.push(Rucksack(line.as_bytes())));
+    result
 }
 
 pub fn part_1(bags: &[Rucksack]) -> u32 {
