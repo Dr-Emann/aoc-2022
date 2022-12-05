@@ -10,6 +10,7 @@ day!(day1);
 day!(day2);
 day!(day3);
 day!(day4);
+day!(day5);
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
