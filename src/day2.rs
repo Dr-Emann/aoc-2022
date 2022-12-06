@@ -123,3 +123,8 @@ pub fn part_2(input: &[Round]) -> u32 {
         })
         .sum()
 }
+
+super::day_test! {demo_1 == 15}
+super::day_test! {demo_2 == 12}
+super::day_test! {part_1 == 11841}
+super::day_test! {part_2 == 13022}

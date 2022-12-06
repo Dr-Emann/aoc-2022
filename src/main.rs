@@ -136,14 +136,66 @@ macro_rules! day {
     };
 }
 
+macro_rules! day_test {
+    (demo_1 == $result:expr) => {
+        #[test]
+        fn test_demo_1() {
+            let input = $crate::day_test!(@demo_input);
+            let input = generator(&input);
+            assert_eq!(part_1(&input), $result);
+        }
+    };
+    (demo_2 == $result:expr) => {
+        #[test]
+        fn test_demo_2() {
+            let input = $crate::day_test!(@demo_input);
+            let input = generator(&input);
+            assert_eq!(part_2(&input), $result);
+        }
+    };
+    (part_1 == $result:expr) => {
+        #[test]
+        fn test_part_1() {
+            let input = $crate::day_test!(@real_input);
+            let input = generator(&input);
+            assert_eq!(part_1(&input), $result);
+        }
+    };
+    (part_2 == $result:expr) => {
+        #[test]
+        fn test_part_2() {
+            let input = $crate::day_test!(@real_input);
+            let input = generator(&input);
+            assert_eq!(part_2(&input), $result);
+        }
+    };
+    (@demo_input) => {
+        {
+            let day_num = $crate::extract_day_number(module_path!());
+            std::fs::read_to_string(&format!("input/2022/demo{day_num}.txt")).unwrap()
+        }
+    };
+    (@real_input) => {
+        {
+            let day_num = $crate::extract_day_number(module_path!());
+            std::fs::read_to_string(&format!("input/2022/day{day_num}.txt")).unwrap()
+        }
+    };
+}
+use day_test;
+
 const fn extract_day_number(s: &str) -> u32 {
     let mut day_number = 0;
     let s = s.as_bytes();
-    assert!(s[0] == b'd');
-    assert!(s[1] == b'a');
-    assert!(s[2] == b'y');
 
-    let mut i = 3;
+    let mut i = s.len();
+    loop {
+        if s[i - 3] == b'd' && s[i - 2] == b'a' && s[i - 1] == b'y' {
+            break;
+        }
+        i -= 1;
+    }
+
     while i < s.len() {
         let digit = s[i];
         assert!(digit.is_ascii_digit());

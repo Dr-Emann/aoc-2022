@@ -154,3 +154,8 @@ impl fmt::Debug for CrateStacks {
         Ok(())
     }
 }
+
+super::day_test! {demo_1 == "CMZ"}
+super::day_test! {demo_2 == "MCD"}
+super::day_test! {part_1 == "VRWBSFZWM"}
+super::day_test! {part_2 == "RBTWJWMCF"}

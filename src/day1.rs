@@ -34,21 +34,7 @@ pub fn part_2(groups: &Groups) -> u32 {
     groups[..3].iter().sum()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const BODY: &str = include_str!("../input/2022/day1.txt");
-
-    #[test]
-    fn p1() {
-        let input = generator(BODY);
-        assert_eq!(part_1(&input), 74394);
-    }
-
-    #[test]
-    fn p2() {
-        let input = generator(BODY);
-        assert_eq!(part_2(&input), 212836);
-    }
-}
+super::day_test! {demo_1 == 24000}
+super::day_test! {demo_2 == 45000}
+super::day_test! {part_1 == 74394}
+super::day_test! {part_2 == 212836}

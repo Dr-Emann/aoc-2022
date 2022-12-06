@@ -31,3 +31,8 @@ pub fn part_2(assignments: &[Pair]) -> usize {
         .filter(|(l, r)| l.0 <= r.1 && l.1 >= r.0)
         .count()
 }
+
+super::day_test! {demo_1 == 2}
+super::day_test! {demo_2 == 4}
+super::day_test! {part_1 == 441}
+super::day_test! {part_2 == 861}

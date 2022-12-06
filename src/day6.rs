@@ -35,21 +35,7 @@ fn find_non_duplicate_window(s: &str, window_size: usize) -> usize {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const INPUT: &str = include_str!("../input/2022/day6.txt");
-
-    #[test]
-    fn test_part_1() {
-        let input = generator(INPUT);
-        assert_eq!(part_1(input), 1287);
-    }
-
-    #[test]
-    fn test_part_2() {
-        let input = generator(INPUT);
-        assert_eq!(part_2(input), 3716);
-    }
-}
+super::day_test! {demo_1 == 7}
+super::day_test! {demo_2 == 19}
+super::day_test! {part_1 == 1287}
+super::day_test! {part_2 == 3716}

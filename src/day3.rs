@@ -61,3 +61,8 @@ pub fn part_2(bags: &[Rucksack]) -> u32 {
     }
     total_score
 }
+
+super::day_test! {demo_1 == 157}
+super::day_test! {demo_2 == 70}
+super::day_test! {part_1 == 7908}
+super::day_test! {part_2 == 2838}
