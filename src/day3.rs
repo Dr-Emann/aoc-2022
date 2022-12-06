@@ -33,13 +33,7 @@ fn priority_from_set(set: u64) -> u32 {
     debug_assert_eq!(set.count_ones(), 1);
 
     let bit_set = set.trailing_zeros();
-    match bit_set {
-        0..=25 => bit_set + 1,
-        _ => {
-            debug_assert!(bit_set < 26 * 2);
-            bit_set + 1 + 26
-        }
-    }
+    bit_set + 1
 }
 
 pub fn generator(s: &str) -> Vec<Rucksack> {
