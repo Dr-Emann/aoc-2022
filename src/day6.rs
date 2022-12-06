@@ -3,25 +3,34 @@ pub fn generator(s: &str) -> &str {
 }
 
 pub fn part_1(s: &str) -> usize {
-    for (i, window) in s.as_bytes().windows(4).enumerate() {
-        if !window[1..].contains(&window[0])
-            && !window[2..].contains(&window[1])
-            && window[2] != window[3]
-        {
-            return i + 4;
-        }
-    }
-    unreachable!()
+    find_non_duplicate_window(s, 4)
 }
 
 pub fn part_2(s: &str) -> usize {
-    'outer: for (i, window) in s.as_bytes().windows(14).enumerate() {
-        for j in 0..13 {
-            if window[j + 1..].contains(&window[j]) {
-                continue 'outer;
+    find_non_duplicate_window(s, 14)
+}
+
+// Find the first `window_size` consecutive bytes containing no duplicates
+fn find_non_duplicate_window(s: &str, window_size: usize) -> usize {
+    let s = s.as_bytes();
+    let mut idx = 0;
+    'outer: loop {
+        let window = &s[idx..][..window_size];
+
+        // Find a pair of duplicates, starting at the end of the window
+        // once we find a pair of duplicates, we can skip until the window is past
+        // the earlier of the two duplicates.
+        // Start looking at the end of the window, because we want to be able to skip
+        // more bytes: the best case is we find the last two bytes are duplicates, and we
+        // can skip almost the whole window.
+        for (i, b1) in window.iter().enumerate().rev() {
+            for (j, b2) in window[..i].iter().enumerate().rev() {
+                if b1 == b2 {
+                    idx += j + 1;
+                    continue 'outer;
+                }
             }
         }
-        return i + 14;
+        return idx;
     }
-    unreachable!()
 }
