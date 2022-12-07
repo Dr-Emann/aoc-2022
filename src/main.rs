@@ -1,17 +1,11 @@
 use clap::Parser;
-use linkme::distributed_slice;
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use std::{fs, panic};
+use std::{fs, mem, panic};
 
 // TODO: This doesn't need linkme or anything
-day!(day1);
-day!(day2);
-day!(day3);
-day!(day4);
-day!(day5);
-day!(day6);
+days!(day1, day2, day3, day4, day5, day6);
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -19,7 +13,7 @@ struct Args {
     /// Day to run
     ///
     /// If not passed, all days are run in order
-    day: Option<u32>,
+    day: Option<usize>,
 
     /// Path to load input from (defaults to path in input/2022 based on day name)
     input: Option<PathBuf>,
@@ -46,21 +40,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let input_path = args.input.unwrap_or_else(|| input_for_day(day, args.demo));
         let input = fs::read_to_string(input_path)?;
 
-        let runner = find_day(day).ok_or_else(|| format!("Day {day} not implemented"))?;
+        let runner = DAYS[day - 1].ok_or_else(|| format!("Day {day} not implemented"))?;
 
         runner(&input);
         return Ok(());
     }
 
-    let mut days = DAYS.to_vec();
-    days.sort_by_key(|(d, _f)| *d);
-
     let overall_start = Instant::now();
-    for (i, (day, runner)) in days.into_iter().enumerate() {
-        if i != 0 {
+    let mut first = true;
+    for (i, runner) in DAYS.iter().enumerate() {
+        let Some(runner) = runner else { continue; };
+        let day = i + 1;
+
+        if mem::replace(&mut first, false) {
             println!();
         }
-        println!("Day {}", day);
+        println!("Day {day}");
         let input_path = input_for_day(day, args.demo);
         let input = fs::read_to_string(input_path)?;
 
@@ -72,15 +67,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn latest_day() -> u32 {
-    DAYS.iter().map(|(d, _)| *d).max().unwrap()
+fn latest_day() -> usize {
+    DAYS.iter().rposition(|d| d.is_some()).unwrap() + 1
 }
 
-fn find_day(day: u32) -> Option<fn(&str)> {
-    DAYS.iter().find(|(d, _)| day == *d).map(|(_, f)| *f)
-}
-
-fn input_for_day(day: u32, demo: bool) -> PathBuf {
+fn input_for_day(day: usize, demo: bool) -> PathBuf {
     let prefix = if demo { "demo" } else { "day" };
     PathBuf::from(format!("input/2022/{prefix}{day}.txt"))
 }
@@ -96,45 +87,45 @@ fn unimplemented_part<I>(_input: &I) -> &'static str {
     "Unimplemented"
 }
 
-macro_rules! day {
-    ($mod_name:ident) => {
-        $crate::day! {$mod_name, $mod_name::generator, $mod_name::part_1, $mod_name::part_2 }
-    };
-    ($mod_name:ident, $gen:expr, $part1:expr, $part2:expr) => {
-        mod $mod_name;
+macro_rules! days {
+    ($($mod_name:ident),*) => {
+        $(mod $mod_name;)*
 
-        // Hide names from outside
-        const _: () = {
-            #[allow(unused_imports)]
-            use $mod_name::*;
+        const DAYS: [Option<fn(&str)>; 25] = {
+            let mut result: [Option<fn(&str)>; 25] = [None; 25];
 
-            fn run_day(s: &str) {
-                let (gen_elapsed, input) = $crate::time(|| $gen(s));
-                let input = match input {
-                    Ok(i) => i,
-                    Err(e) => {
-                        println!("Generator error: {e}");
-                        return;
-                    }
-                };
-                let (p1_elapsed, p1_result) = $crate::time(|| $part1(&input));
-                let (p2_elapsed, p2_result) = $crate::time(|| $part2(&input));
+            $(
+            {
+                fn run_day(s: &str) {
+                    let (gen_elapsed, input) = $crate::time(|| $mod_name::generator(s));
+                    let input = match input {
+                        Ok(i) => i,
+                        Err(e) => {
+                            println!("Generator error: {e}");
+                            return;
+                        }
+                    };
+                    let (p1_elapsed, p1_result) = $crate::time(|| $mod_name::part_1(&input));
+                    let (p2_elapsed, p2_result) = $crate::time(|| $mod_name::part_2(&input));
 
-                let p1_result = $crate::stringify_res(p1_result);
-                let p2_result = $crate::stringify_res(p2_result);
+                    let p1_result = $crate::stringify_res(p1_result);
+                    let p2_result = $crate::stringify_res(p2_result);
 
-                println!("Gen    ({:.2?})", gen_elapsed);
-                println!("Part 1 ({:.2?}) {p1_result}", p1_elapsed);
-                println!("Part 2 ({:.2?}) {p2_result}", p2_elapsed);
-                println!("Total  ({:.2?})", gen_elapsed + p1_elapsed + p2_elapsed);
+                    println!("Gen    ({:.2?})", gen_elapsed);
+                    println!("Part 1 ({:.2?}) {p1_result}", p1_elapsed);
+                    println!("Part 2 ({:.2?}) {p2_result}", p2_elapsed);
+                    println!("Total  ({:.2?})", gen_elapsed + p1_elapsed + p2_elapsed);
+                }
+
+                result[$crate::extract_day_number(stringify!($mod_name)) as usize - 1] = Some(run_day);
             }
+            )*
 
-            #[linkme::distributed_slice($crate::DAYS)]
-            static DAY: (u32, fn(&str)) =
-                ($crate::extract_day_number(stringify!($mod_name)), run_day);
+            result
         };
     };
 }
+use days;
 
 macro_rules! day_test {
     (demo_1 == $result:expr) => {
@@ -208,11 +199,6 @@ const fn extract_day_number(s: &str) -> u32 {
     day_number
 }
 
-pub(crate) use day;
-
-#[distributed_slice]
-static DAYS: [(u32, fn(&str))] = [..];
-
 fn time<T, F: FnOnce() -> T + panic::UnwindSafe>(f: F) -> (Duration, Result<T, String>) {
     let start = Instant::now();
     let result = run_catch_panic(f);
@@ -240,12 +226,4 @@ fn stringify_res<T: Display, E: Display>(r: Result<T, E>) -> String {
         Ok(t) => t.to_string(),
         Err(e) => e.to_string(),
     }
-}
-
-#[test]
-fn unique_days() {
-    let mut days: Vec<u32> = DAYS.iter().map(|(d, _)| *d).collect();
-    days.sort();
-    days.dedup();
-    assert_eq!(days.len(), DAYS.len());
 }
