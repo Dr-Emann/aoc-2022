@@ -9,16 +9,25 @@ pub fn generator(s: &str) -> Vec<u32> {
         if line == "$ cd /" || line == "$ ls" || line.starts_with("dir ") {
             continue;
         } else if line == "$ cd .." {
-            results.push(in_progress.pop().unwrap());
+            let dir_size = in_progress.pop().unwrap();
+            results.push(dir_size);
+            // This parent dir also contains the total size of the subdir we just left
+            *in_progress.last_mut().unwrap() += dir_size;
         } else if line.starts_with("$ cd ") {
             in_progress.push(0u32);
         } else {
             let (size, _name) = line.split_once(' ').unwrap();
             let size: u32 = size.parse().unwrap();
-            in_progress.iter_mut().for_each(|d| *d += size);
+            *in_progress.last_mut().unwrap() += size;
         }
     }
-    results.extend_from_slice(&in_progress);
+
+    results.reserve(in_progress.len());
+    let mut extra_size = 0;
+    for &size in in_progress.iter().rev() {
+        results.push(size + extra_size);
+        extra_size += size;
+    }
     results.sort_unstable();
     results
 }
