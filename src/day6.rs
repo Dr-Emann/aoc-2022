@@ -23,12 +23,10 @@ fn find_non_duplicate_window(s: &str, window_size: usize) -> usize {
         // Start looking at the end of the window, because we want to be able to skip
         // more bytes: the best case is we find the last two bytes are duplicates, and we
         // can skip almost the whole window.
-        for (i, b1) in window.iter().enumerate().rev() {
-            for (j, b2) in window[..i].iter().enumerate().rev() {
-                if b1 == b2 {
-                    idx += j + 1;
-                    continue 'outer;
-                }
+        for (i, b) in window[..window.len() - 1].iter().enumerate().rev() {
+            if window[i + 1..].contains(b) {
+                idx += i + 1;
+                continue 'outer;
             }
         }
         return idx + window_size;
