@@ -4,8 +4,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use std::{fs, mem, panic};
 
-// TODO: This doesn't need linkme or anything
-days!(day1, day2, day3, day4, day5, day6);
+days![day1, day2, day3, day4, day5, day6, day7];
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
