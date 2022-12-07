@@ -6,7 +6,6 @@ type Pair = (Range, Range);
 pub fn generator(s: &str) -> Vec<Pair> {
     let mut result = Vec::with_capacity(1024);
     s.lines().for_each(|line| {
-        let (l, r) = line.split_once(',').unwrap();
         let mut items = line.split([',', '-']).map(|s| u32::from_str(s).unwrap());
 
         result.push((
