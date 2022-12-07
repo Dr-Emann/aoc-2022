@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import shutil
 import tempfile
@@ -5,8 +7,6 @@ from pathlib import Path
 import subprocess
 import argparse
 from argparse import ArgumentParser
-
-from tempfile import tempdir
 
 def main():
     parser = ArgumentParser()
