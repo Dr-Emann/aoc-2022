@@ -1,5 +1,5 @@
+use ahash::{HashSet, HashSetExt};
 use std::cmp;
-use std::collections::HashSet;
 
 type Dist = i32;
 
