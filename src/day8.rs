@@ -128,7 +128,7 @@ pub fn part_2(grid: &Grid) -> u32 {
         }
     }
     seen_pos.fill([width - 1; 10]);
-    // left
+    // right
     for x in (0..width).rev() {
         for y in 0..height {
             let tree_height = grid.get(x, y) - b'0';
