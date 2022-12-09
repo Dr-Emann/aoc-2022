@@ -52,20 +52,22 @@ pub fn generator(s: &str) -> Vec<Move> {
 }
 
 trait MoveVect {
-    fn move_toward(&mut self, other: Self);
+    fn move_toward(&mut self, other: Self) -> bool;
     fn move_to(&mut self, dir: Dir);
 }
 
 impl MoveVect for Vect {
-    fn move_toward(&mut self, other: Self) {
+    // return if move happened
+    fn move_toward(&mut self, other: Self) -> bool {
         let x_diff = other.0 - self.0;
         let y_diff = other.1 - self.1;
         let dist = cmp::max(x_diff.abs(), y_diff.abs());
         if dist <= 1 {
-            return;
+            return false;
         }
         self.0 += x_diff.signum();
         self.1 += y_diff.signum();
+        true
     }
 
     fn move_to(&mut self, dir: Dir) {
@@ -81,10 +83,12 @@ fn count_tail_positions<const KNOTS: usize>(moves: &[Move]) -> usize {
     let mut tail_positions = HashSet::with_capacity(2048);
     tail_positions.insert((0, 0));
     for m in moves {
-        for _ in 0..m.count {
+        'head_move: for _ in 0..m.count {
             knots[0].move_to(m.dir);
             for i in 1..KNOTS {
-                knots[i].move_toward(knots[i - 1]);
+                if !knots[i].move_toward(knots[i - 1]) {
+                    continue 'head_move;
+                }
             }
             tail_positions.insert(*knots.last().unwrap());
         }
