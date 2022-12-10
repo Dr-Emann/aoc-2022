@@ -1,4 +1,5 @@
 use ahash::{HashSet, HashSetExt};
+use arrayvec::ArrayVec;
 use std::cmp;
 
 type Dist = i32;
@@ -77,23 +78,142 @@ impl MoveVect for Vect {
     }
 }
 
-fn count_tail_positions<const KNOTS: usize>(moves: &[Move]) -> usize {
-    let mut knots = [(0, 0); KNOTS];
+#[derive(Copy, Clone)]
+struct Section {
+    ty: Type,
+    start: Vect,
+    count: u8,
+}
 
-    let mut tail_positions = HashSet::with_capacity(2048);
-    tail_positions.insert((0, 0));
-    for m in moves {
-        'head_move: for _ in 0..m.count {
-            knots[0].move_to(m.dir);
-            for i in 1..KNOTS {
-                if !knots[i].move_toward(knots[i - 1]) {
-                    continue 'head_move;
-                }
-            }
-            tail_positions.insert(*knots.last().unwrap());
+impl Section {
+    fn end(self) -> Vect {
+        let count = i32::from(self.count);
+        let (dx, dy) = match self.ty {
+            Type::Together => (0, 0),
+            Type::StraightLeft => (-count, 0),
+            Type::StraightRight => (count, 0),
+            Type::StraightUp => (0, count),
+            Type::StraightDown => (0, -count),
+            Type::DiagonalRightDown => (count, -count),
+            Type::DiagonalLeftDown => (-count, -count),
+            Type::DiagonalRightUp => (count, count),
+            Type::DiagonalLeftUp => (-count, count),
+        };
+        let (x, y) = self.start;
+        (x + dx, y + dy)
+    }
+
+    fn move_to(mut self, dir: Dir, count: i32) -> Option<(Self, Option<Self>)> {
+        assert!(count > 0);
+
+        let dir_vect = dir.to_vect();
+        let ty_vect = self.ty.going_vect();
+        if dir_vect == ty_vect {
+            self.start.0 += dir_vect.0 * count;
+            self.start.1 += dir_vect.1 * count;
+            return Some((self, None));
+        }
+        if ty_vect == (0, 0) {
+            let new = Self {
+                ty: dir.into(),
+                start: (
+                    self.start.0 + dir_vect.0 * count,
+                    self.start.1 + dir_vect.1 * count,
+                ),
+                count: cmp::min(self.count, count.try_into().unwrap_or(u8::MAX)),
+            };
+            let remainder = (count < i32::from(self.count)).then_some(Self {
+                ty: Type::Together,
+                start: self.start,
+                count: count as u8,
+            });
+            return Some((new, remainder));
+        }
+        None
+    }
+}
+
+#[derive(Copy, Clone)]
+enum Type {
+    Together,
+    StraightLeft,
+    StraightRight,
+    StraightUp,
+    StraightDown,
+    DiagonalRightDown,
+    DiagonalLeftDown,
+    DiagonalRightUp,
+    DiagonalLeftUp,
+}
+
+impl Type {
+    fn to_vect(self) -> Vect {
+        match self {
+            Type::Together => (0, 0),
+            Type::StraightLeft => (-1, 0),
+            Type::StraightRight => (1, 0),
+            Type::StraightUp => (0, 1),
+            Type::StraightDown => (0, -1),
+            Type::DiagonalRightDown => (1, -1),
+            Type::DiagonalLeftDown => (-1, -1),
+            Type::DiagonalRightUp => (1, 1),
+            Type::DiagonalLeftUp => (-1, 1),
         }
     }
-    tail_positions.len()
+
+    fn going_vect(self) -> Vect {
+        let (dx, dy) = self.to_vect();
+        (-dx, -dy)
+    }
+}
+
+impl From<Dir> for Type {
+    fn from(dir: Dir) -> Self {
+        match dir {
+            Dir::Up => Self::StraightUp,
+            Dir::Down => Self::StraightDown,
+            Dir::Left => Self::StraightLeft,
+            Dir::Right => Self::StraightRight,
+        }
+    }
+}
+
+struct Rope<const KNOTS: usize> {
+    sections: ArrayVec<Section, KNOTS>,
+}
+
+impl<const KNOTS: usize> Rope<KNOTS> {
+    fn new() -> Self {
+        let mut sections = ArrayVec::new();
+        sections.push(Section {
+            ty: Type::Together,
+            start: (0, 0),
+            count: KNOTS as _,
+        });
+        Self { sections }
+    }
+
+    fn check(&self) {
+        #[cfg(debug_assertions)]
+        {
+            debug_assert!(!self.sections.is_empty());
+            let total_len: usize = self.sections.iter().map(|s| usize::from(s.count)).sum();
+            debug_assert_eq!(total_len, KNOTS);
+        }
+    }
+
+    fn move_to(&mut self, dir: Dir) {
+        match dir {
+            Dir::Up => {}
+            Dir::Down => {}
+            Dir::Left => {}
+            Dir::Right => {}
+        }
+    }
+}
+
+fn count_tail_positions<const KNOTS: usize>(moves: &[Move]) -> usize {
+    todo!()
 }
 
 pub fn part_1(moves: &[Move]) -> usize {
