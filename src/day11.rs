@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, mem};
 
 type Worry = u64;
 type MonkeyId = u8;
@@ -97,11 +97,53 @@ fn lcm(a: Worry, b: Worry) -> Worry {
     a / gcd(a, b) * b
 }
 
+fn get_monkey_with_destinations(monkeys: &mut [Monkey], i: usize) -> [&mut Monkey; 3] {
+    let start = monkeys.as_ptr();
+    let monkey = &monkeys[i];
+    let true_idx = usize::from(monkey.true_monkey);
+    let false_idx = usize::from(monkey.false_monkey);
+
+    let mut idxs = [i, true_idx, false_idx];
+    idxs.sort_unstable();
+
+    let mut monkeys = monkeys.iter_mut();
+    let mut selected = [
+        monkeys.nth(idxs[0]).unwrap(),
+        monkeys.nth(idxs[1] - idxs[0] - 1).unwrap(),
+        monkeys.nth(idxs[2] - idxs[1] - 1).unwrap(),
+    ];
+
+    if idxs[0] != i {
+        if idxs[1] == i {
+            idxs.swap(0, 1);
+            selected.swap(0, 1);
+        } else {
+            idxs.swap(0, 2);
+            selected.swap(0, 2);
+        }
+    }
+    if idxs[1] != true_idx {
+        selected.swap(1, 2);
+    }
+
+    debug_assert_eq!(
+        ((selected[0] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
+        i
+    );
+    debug_assert_eq!(
+        ((selected[1] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
+        true_idx
+    );
+    debug_assert_eq!(
+        ((selected[2] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
+        false_idx
+    );
+
+    selected
+}
+
 fn iterate_monkeys(monkeys: &mut [Monkey], iterations: u32, reduce_worry: bool) -> u64 {
     let modulus: Worry = monkeys.iter().fold(1, |acc, m| lcm(acc, m.divisible_check));
-
-    let mut scratch_true = Vec::with_capacity(128);
-    let mut scratch_false = Vec::with_capacity(128);
 
     for _ in 0..iterations {
         for i in 0..monkeys.len() {
@@ -118,25 +160,13 @@ fn iterate_monkeys(monkeys: &mut [Monkey], iterations: u32, reduce_worry: bool) 
                 *item %= modulus;
             }
             monkey.items_inspected += u64::try_from(monkey.worries.len()).unwrap();
-            monkey.worries.drain(..).for_each(|w| {
-                let dst = if w % monkey.divisible_check == 0 {
-                    &mut scratch_true
-                } else {
-                    &mut scratch_false
-                };
-                dst.push(w);
-            });
 
-            let true_idx = monkey.true_monkey;
-            let false_idx = monkey.false_monkey;
-            monkeys[usize::from(true_idx)]
-                .worries
-                .extend_from_slice(&scratch_true);
-            monkeys[usize::from(false_idx)]
-                .worries
-                .extend_from_slice(&scratch_false);
-            scratch_true.clear();
-            scratch_false.clear();
+            let [monkey, true_monkey, false_monkey] = get_monkey_with_destinations(monkeys, i);
+            let (true_items, false_items) =
+                partition::partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
+            true_monkey.worries.extend_from_slice(true_items);
+            false_monkey.worries.extend_from_slice(false_items);
+            monkey.worries.clear();
         }
     }
 
