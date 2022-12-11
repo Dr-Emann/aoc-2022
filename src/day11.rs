@@ -100,6 +100,9 @@ fn lcm(a: Worry, b: Worry) -> Worry {
 fn iterate_monkeys(monkeys: &mut [Monkey], iterations: u32, reduce_worry: bool) -> u64 {
     let modulus: Worry = monkeys.iter().fold(1, |acc, m| lcm(acc, m.divisible_check));
 
+    let mut scratch_true = Vec::with_capacity(128);
+    let mut scratch_false = Vec::with_capacity(128);
+
     for _ in 0..iterations {
         for i in 0..monkeys.len() {
             let monkey = &mut monkeys[i];
@@ -115,19 +118,25 @@ fn iterate_monkeys(monkeys: &mut [Monkey], iterations: u32, reduce_worry: bool) 
                 *item %= modulus;
             }
             monkey.items_inspected += u64::try_from(monkey.worries.len()).unwrap();
-            let (true_items, false_items): (Vec<_>, Vec<_>) = monkey
-                .worries
-                .drain(..)
-                .partition(|&item| item % monkey.divisible_check == 0);
+            monkey.worries.drain(..).for_each(|w| {
+                let dst = if w % monkey.divisible_check == 0 {
+                    &mut scratch_true
+                } else {
+                    &mut scratch_false
+                };
+                dst.push(w);
+            });
 
             let true_idx = monkey.true_monkey;
             let false_idx = monkey.false_monkey;
             monkeys[usize::from(true_idx)]
                 .worries
-                .extend_from_slice(&true_items);
+                .extend_from_slice(&scratch_true);
             monkeys[usize::from(false_idx)]
                 .worries
-                .extend_from_slice(&false_items);
+                .extend_from_slice(&scratch_false);
+            scratch_true.clear();
+            scratch_false.clear();
         }
     }
 
@@ -151,4 +160,4 @@ pub fn part_2(monkeys: &[Monkey]) -> u64 {
 super::day_test! {demo_1 == 10605}
 super::day_test! {part_1 == 61005}
 super::day_test! {demo_2 == 2713310158}
-super::day_test! {part_2 == 2713310158}
+super::day_test! {part_2 == 20567144694}
