@@ -1,4 +1,4 @@
-use std::{cmp, mem};
+use std::cmp;
 
 type Worry = u64;
 type MonkeyId = u8;
@@ -11,7 +11,7 @@ enum Op {
 }
 
 #[derive(Debug, Clone)]
-pub struct Monkey {
+struct Monkey {
     worries: Vec<Worry>,
     op: Op,
     divisible_check: Worry,
@@ -20,7 +20,102 @@ pub struct Monkey {
     items_inspected: u64,
 }
 
-pub fn generator(s: &str) -> Vec<Monkey> {
+#[derive(Debug, Clone)]
+pub struct Monkeys {
+    monkeys: Box<[Monkey]>,
+    lcm_modulus: Worry,
+}
+
+impl Monkeys {
+    fn new(monkeys: Box<[Monkey]>) -> Self {
+        let mut lcm_modulus = 1;
+        let monkeys_len = monkeys.len();
+        for (i, monkey) in monkeys.iter().enumerate() {
+            lcm_modulus = lcm(lcm_modulus, monkey.divisible_check);
+
+            let true_monkey = usize::from(monkey.true_monkey);
+            let false_monkey = usize::from(monkey.false_monkey);
+
+            // Ensure all indexes are in range, and non-overlapping with each other or `i`
+            // this assurance is used in the unsafe block when getting all 3 monkeys via &mut at the same time
+            assert!(true_monkey < monkeys_len);
+            assert!(false_monkey < monkeys_len);
+
+            assert_ne!(true_monkey, i);
+            assert_ne!(false_monkey, i);
+            assert_ne!(true_monkey, false_monkey);
+        }
+
+        Self {
+            monkeys,
+            lcm_modulus,
+        }
+    }
+
+    fn step(&mut self, reduce_worry: bool) {
+        let lcm_modulus = self.lcm_modulus;
+        for i in 0..self.monkeys.len() {
+            let (monkey, (true_dest, false_dest)) = self.get_with_destinations(i);
+            for item in &mut monkey.worries {
+                match monkey.op {
+                    Op::Add(x) => *item += x,
+                    Op::Mul(x) => *item *= x,
+                    Op::Square => *item *= *item,
+                }
+                if reduce_worry {
+                    *item /= 3;
+                }
+                *item %= lcm_modulus;
+            }
+            monkey.items_inspected += u64::try_from(monkey.worries.len()).unwrap();
+
+            let (true_items, false_items) =
+                partition::partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
+            true_dest.worries.extend_from_slice(true_items);
+            false_dest.worries.extend_from_slice(false_items);
+            monkey.worries.clear();
+        }
+    }
+
+    // Consume self, since this reorders the monkeys
+    fn monkey_business(mut self) -> u64 {
+        let (top_monkeys, _, _) = self
+            .monkeys
+            .select_nth_unstable_by_key(2, |m| cmp::Reverse(m.items_inspected));
+        top_monkeys[1].items_inspected * top_monkeys[0].items_inspected
+    }
+
+    // Return (monkey, (true_dest, false_dest))
+    fn get_with_destinations(&mut self, i: usize) -> (&mut Monkey, (&mut Monkey, &mut Monkey)) {
+        let (true_idx, false_idx) = {
+            let monkey = &self.monkeys[i];
+            (
+                usize::from(monkey.true_monkey),
+                usize::from(monkey.false_monkey),
+            )
+        };
+
+        debug_assert!(i < self.monkeys.len());
+        debug_assert!(true_idx < self.monkeys.len());
+        debug_assert!(false_idx < self.monkeys.len());
+
+        debug_assert_ne!(i, true_idx);
+        debug_assert_ne!(i, false_idx);
+        debug_assert_ne!(true_idx, false_idx);
+
+        let start: *mut Monkey = self.monkeys.as_mut_ptr();
+        // SAFETY: All indexes are in bounds, and non-overlapping, as checked in the `new` func,
+        //         and lifetimes will borrow self mutably.
+        unsafe {
+            (
+                &mut *start.add(i),
+                (&mut *start.add(true_idx), &mut *start.add(false_idx)),
+            )
+        }
+    }
+}
+
+pub fn generator(s: &str) -> Monkeys {
     let mut result = Vec::with_capacity(16);
 
     let mut lines = s.lines();
@@ -83,7 +178,7 @@ pub fn generator(s: &str) -> Vec<Monkey> {
         });
     }
 
-    result
+    Monkeys::new(result.into_boxed_slice())
 }
 
 fn gcd(mut a: Worry, mut b: Worry) -> Worry {
@@ -97,94 +192,24 @@ fn lcm(a: Worry, b: Worry) -> Worry {
     a / gcd(a, b) * b
 }
 
-fn get_monkey_with_destinations(monkeys: &mut [Monkey], i: usize) -> [&mut Monkey; 3] {
-    let start = monkeys.as_ptr();
-    let monkey = &monkeys[i];
-    let true_idx = usize::from(monkey.true_monkey);
-    let false_idx = usize::from(monkey.false_monkey);
+pub fn part_1(monkeys: &Monkeys) -> u64 {
+    let mut monkeys = monkeys.clone();
 
-    let mut idxs = [i, true_idx, false_idx];
-    idxs.sort_unstable();
-
-    let mut monkeys = monkeys.iter_mut();
-    let mut selected = [
-        monkeys.nth(idxs[0]).unwrap(),
-        monkeys.nth(idxs[1] - idxs[0] - 1).unwrap(),
-        monkeys.nth(idxs[2] - idxs[1] - 1).unwrap(),
-    ];
-
-    if idxs[0] != i {
-        if idxs[1] == i {
-            idxs.swap(0, 1);
-            selected.swap(0, 1);
-        } else {
-            idxs.swap(0, 2);
-            selected.swap(0, 2);
-        }
-    }
-    if idxs[1] != true_idx {
-        selected.swap(1, 2);
+    for _ in 0..20 {
+        monkeys.step(true);
     }
 
-    debug_assert_eq!(
-        ((selected[0] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
-        i
-    );
-    debug_assert_eq!(
-        ((selected[1] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
-        true_idx
-    );
-    debug_assert_eq!(
-        ((selected[2] as *mut _ as usize) - start as usize) / mem::size_of::<Monkey>(),
-        false_idx
-    );
-
-    selected
+    monkeys.monkey_business()
 }
 
-fn iterate_monkeys(monkeys: &mut [Monkey], iterations: u32, reduce_worry: bool) -> u64 {
-    let modulus: Worry = monkeys.iter().fold(1, |acc, m| lcm(acc, m.divisible_check));
+pub fn part_2(monkeys: &Monkeys) -> u64 {
+    let mut monkeys = monkeys.clone();
 
-    for _ in 0..iterations {
-        for i in 0..monkeys.len() {
-            let monkey = &mut monkeys[i];
-            for item in &mut monkey.worries {
-                match monkey.op {
-                    Op::Add(x) => *item += x,
-                    Op::Mul(x) => *item *= x,
-                    Op::Square => *item *= *item,
-                }
-                if reduce_worry {
-                    *item /= 3;
-                }
-                *item %= modulus;
-            }
-            monkey.items_inspected += u64::try_from(monkey.worries.len()).unwrap();
-
-            let [monkey, true_monkey, false_monkey] = get_monkey_with_destinations(monkeys, i);
-            let (true_items, false_items) =
-                partition::partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
-            true_monkey.worries.extend_from_slice(true_items);
-            false_monkey.worries.extend_from_slice(false_items);
-            monkey.worries.clear();
-        }
+    for _ in 0..10_000 {
+        monkeys.step(false);
     }
 
-    let (top_monkeys, _, _) =
-        monkeys.select_nth_unstable_by_key(2, |m| cmp::Reverse(m.items_inspected));
-    top_monkeys.iter().map(|m| m.items_inspected).product()
-}
-
-pub fn part_1(monkeys: &[Monkey]) -> u64 {
-    let mut monkeys = monkeys.to_vec();
-
-    iterate_monkeys(&mut monkeys, 20, true)
-}
-
-pub fn part_2(monkeys: &[Monkey]) -> u64 {
-    let mut monkeys = monkeys.to_vec();
-
-    iterate_monkeys(&mut monkeys, 10_000, false)
+    monkeys.monkey_business()
 }
 
 super::day_test! {demo_1 == 10605}
