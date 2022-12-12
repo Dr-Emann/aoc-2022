@@ -20,6 +20,23 @@ struct Monkey {
     items_inspected: u64,
 }
 
+impl Monkey {
+    fn inspect_items(&mut self, lcm_modulus: Worry, reduce_worry: bool) {
+        for item in &mut self.worries {
+            match self.op {
+                Op::Add(x) => *item += x,
+                Op::Mul(x) => *item *= x,
+                Op::Square => *item *= *item,
+            }
+            if reduce_worry {
+                *item /= 3;
+            }
+            *item %= lcm_modulus;
+        }
+        self.items_inspected += u64::try_from(self.worries.len()).unwrap();
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Monkeys {
     monkeys: Box<[Monkey]>,
@@ -56,18 +73,7 @@ impl Monkeys {
         let lcm_modulus = self.lcm_modulus;
         for i in 0..self.monkeys.len() {
             let (monkey, (true_dest, false_dest)) = self.get_with_destinations(i);
-            for item in &mut monkey.worries {
-                match monkey.op {
-                    Op::Add(x) => *item += x,
-                    Op::Mul(x) => *item *= x,
-                    Op::Square => *item *= *item,
-                }
-                if reduce_worry {
-                    *item /= 3;
-                }
-                *item %= lcm_modulus;
-            }
-            monkey.items_inspected += u64::try_from(monkey.worries.len()).unwrap();
+            monkey.inspect_items(lcm_modulus, reduce_worry);
 
             let (true_items, false_items) =
                 partition::partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
