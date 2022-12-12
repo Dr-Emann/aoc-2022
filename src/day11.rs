@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, mem};
 
 type Worry = u64;
 type MonkeyId = u8;
@@ -76,7 +76,7 @@ impl Monkeys {
             monkey.inspect_items(lcm_modulus, reduce_worry);
 
             let (true_items, false_items) =
-                partition::partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
+                partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
             true_dest.worries.extend_from_slice(true_items);
             false_dest.worries.extend_from_slice(false_items);
             monkey.worries.clear();
@@ -216,6 +216,53 @@ pub fn part_2(monkeys: &Monkeys) -> u64 {
     }
 
     monkeys.monkey_business()
+}
+
+pub fn partition<T, P>(data: &mut [T], predicate: P) -> (&mut [T], &mut [T])
+where
+    P: FnMut(&T) -> bool,
+{
+    let idx = partition_index(data.iter_mut(), predicate);
+    data.split_at_mut(idx)
+}
+
+// Copied from Iterator::partition_in_place in std
+fn partition_index<'a, T, It, P>(mut iter: It, mut predicate: P) -> usize
+where
+    T: 'a,
+    It: DoubleEndedIterator<Item = &'a mut T>,
+    P: FnMut(&T) -> bool,
+{
+    // These closure "factory" functions exist to avoid genericity in `Self`.
+    #[inline]
+    fn is_false<'a, T>(
+        predicate: &'a mut impl FnMut(&T) -> bool,
+        true_count: &'a mut usize,
+    ) -> impl FnMut(&&mut T) -> bool + 'a {
+        move |x| {
+            let p = predicate(&**x);
+            *true_count += p as usize;
+            !p
+        }
+    }
+
+    #[inline]
+    fn is_true<T>(predicate: &mut impl FnMut(&T) -> bool) -> impl FnMut(&&mut T) -> bool + '_ {
+        move |x| predicate(&**x)
+    }
+
+    let predicate = &mut predicate;
+    // Repeatedly find the first `false` and swap it with the last `true`.
+    let mut true_count = 0;
+    while let Some(head) = iter.find(is_false(predicate, &mut true_count)) {
+        if let Some(tail) = iter.rfind(is_true(predicate)) {
+            mem::swap(head, tail);
+            true_count += 1;
+        } else {
+            break;
+        }
+    }
+    true_count
 }
 
 super::day_test! {demo_1 == 10605}
