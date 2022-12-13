@@ -35,8 +35,8 @@ pub fn generator(s: &str) -> Map {
 }
 
 pub fn part_1(map: &Map) -> u32 {
-    let mut came_from = HashMap::new();
-    let mut cost_so_far = HashMap::new();
+    let mut came_from = HashMap::with_capacity(1024);
+    let mut cost_so_far = HashMap::with_capacity(1024);
     a_star(
         map.grid,
         iter::once(map.start),
@@ -48,8 +48,8 @@ pub fn part_1(map: &Map) -> u32 {
 }
 
 pub fn part_2(map: &Map) -> u32 {
-    let mut came_from = HashMap::new();
-    let mut cost_so_far = HashMap::new();
+    let mut came_from = HashMap::with_capacity(1024);
+    let mut cost_so_far = HashMap::with_capacity(1024);
     a_star(
         map.grid,
         map.grid.multi_position(b'a'),
