@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::iter;
 
 #[derive(Clone, Debug)]
 pub enum Item {
