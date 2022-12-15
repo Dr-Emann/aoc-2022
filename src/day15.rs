@@ -6,7 +6,7 @@ type Point = (i32, i32);
 pub struct SensorBeacon {
     sensor: Point,
     beacon: Point,
-    // TODO: Try cache distance?
+    dist: u32,
 }
 
 impl SensorBeacon {
@@ -15,7 +15,7 @@ impl SensorBeacon {
     }
 
     pub fn dist(self) -> u32 {
-        dist(self.sensor, self.beacon)
+        self.dist
     }
 }
 
@@ -34,7 +34,11 @@ pub fn generator(s: &str) -> Vec<SensorBeacon> {
         let (sensor, beacon) = line.split_once(": closest beacon is at ").unwrap();
         let sensor = parse_pos(sensor);
         let beacon = parse_pos(beacon);
-        result.push(SensorBeacon { sensor, beacon });
+        result.push(SensorBeacon {
+            sensor,
+            beacon,
+            dist: dist(sensor, beacon),
+        });
     }
     result
 }
