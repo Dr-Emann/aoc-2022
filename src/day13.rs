@@ -1,9 +1,19 @@
 use std::cmp::Ordering;
+use std::iter;
 
 #[derive(Clone, Debug)]
 pub enum Item {
     Num(u8),
     List(Vec<Item>),
+}
+
+impl Item {
+    fn as_slice(&self) -> &[Item] {
+        match self {
+            num @ Item::Num(_) => std::slice::from_ref(num),
+            Item::List(list) => list,
+        }
+    }
 }
 
 impl PartialEq for Item {
@@ -24,8 +34,11 @@ impl Ord for Item {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Self::Num(lhs), Self::Num(rhs)) => lhs.cmp(rhs),
-            (Self::List(lhs), Self::List(rhs)) => {
-                for (l, r) in lhs.iter().zip(rhs.iter()) {
+            (lhs, rhs) => {
+                let lhs = lhs.as_slice();
+                let rhs = rhs.as_slice();
+
+                for (l, r) in lhs.iter().zip(rhs) {
                     let cmp = l.cmp(r);
                     if cmp != Ordering::Equal {
                         return cmp;
@@ -34,8 +47,6 @@ impl Ord for Item {
                 // All items same, just based on length now
                 lhs.len().cmp(&rhs.len())
             }
-            (list @ Self::List(_), &Self::Num(n)) => list.cmp(&Item::List(vec![Self::Num(n)])),
-            (&Self::Num(n), list @ Self::List(_)) => Item::List(vec![Self::Num(n)]).cmp(list),
         }
     }
 }
