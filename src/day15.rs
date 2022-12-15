@@ -43,7 +43,7 @@ pub fn generator(s: &str) -> Vec<SensorBeacon> {
     result
 }
 
-pub fn part_1(items: &[SensorBeacon]) -> u32 {
+fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
     let mut min_x = i32::MAX;
     let mut min_y = i32::MAX;
     let mut max_x = 0;
@@ -57,7 +57,6 @@ pub fn part_1(items: &[SensorBeacon]) -> u32 {
     }
 
     let mut count = 0;
-    let y = 2_000_000;
     let can_influence: Vec<_> = items
         .iter()
         .copied()
@@ -80,6 +79,12 @@ pub fn part_1(items: &[SensorBeacon]) -> u32 {
     count
 }
 
+pub fn part_1(items: &[SensorBeacon]) -> u32 {
+    count_non_beacons_at_y(items, 2000000)
+}
+
 fn dist(lhs: Point, rhs: Point) -> u32 {
     lhs.0.abs_diff(rhs.0) + lhs.1.abs_diff(rhs.1)
 }
+
+super::day_test! {part_1 == 4748135}
