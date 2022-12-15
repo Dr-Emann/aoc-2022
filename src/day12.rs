@@ -60,8 +60,10 @@ pub fn part_2(map: &Map) -> u32 {
     cost_so_far[&map.end]
 }
 
-const fn heuristic(src: Pos, dst: Pos) -> u32 {
-    src.0.abs_diff(dst.0) + src.1.abs_diff(dst.1)
+const fn heuristic(_src: Pos, _dst: Pos) -> u32 {
+    // Unfortunately, the heuristic doesn't help much
+    // src.0.abs_diff(dst.0) + src.1.abs_diff(dst.1)
+    0
 }
 
 fn a_star(
