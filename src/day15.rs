@@ -54,8 +54,16 @@ pub fn part_1(items: &[SensorBeacon]) -> u32 {
 
     let mut count = 0;
     let y = 2_000_000;
+    let can_influence: Vec<_> = items
+        .iter()
+        .copied()
+        .filter(|sb| {
+            (sb.sensor.1 <= y && sb.sensor.1.checked_add_unsigned(sb.dist()).unwrap() > y)
+                || (sb.sensor.1 >= y && sb.sensor.1.checked_sub_unsigned(sb.dist()).unwrap() < y)
+        })
+        .collect();
     for x in min_x..=max_x {
-        for item in items {
+        for item in &can_influence {
             if (x, y) == item.beacon {
                 continue;
             }
