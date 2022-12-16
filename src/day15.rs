@@ -1,4 +1,7 @@
 pub(crate) use super::unimplemented_part as part_2;
+use ahash::{HashSet, HashSetExt};
+use std::cmp;
+use std::ops::Range;
 
 type Point = (i32, i32);
 
@@ -10,8 +13,14 @@ pub struct SensorBeacon {
 }
 
 impl SensorBeacon {
-    pub fn dist(self) -> u32 {
-        self.dist
+    fn x_range_at_y(self, y: i32) -> Range<i32> {
+        let y_dist = self.sensor.1.abs_diff(y);
+
+        let width = (self.dist * 2 + 1).saturating_sub(2 * y_dist);
+        let center = self.sensor.0;
+
+        let start = center.sub_unsigned(width / 2);
+        start..start.add_unsigned(width)
     }
 }
 
@@ -40,48 +49,35 @@ pub fn generator(s: &str) -> Vec<SensorBeacon> {
 }
 
 fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
-    let mut min_x = i32::MAX;
-    let mut min_y = i32::MAX;
-    let mut max_x = 0;
-    let mut max_y = 0;
-
-    for item in items {
-        min_x = min_x.min(item.sensor.0.checked_sub_unsigned(item.dist()).unwrap());
-        max_x = max_x.max(item.sensor.0.checked_add_unsigned(item.dist()).unwrap());
-        min_y = min_y.min(item.sensor.1.checked_sub_unsigned(item.dist()).unwrap());
-        max_y = max_y.max(item.sensor.1.checked_add_unsigned(item.dist()).unwrap());
-    }
-
-    let mut count = 0;
-    let mut can_influence: Vec<_> = items
+    let mut known_beacons = HashSet::with_capacity(16);
+    let mut ranges: Vec<_> = items
         .iter()
-        .copied()
-        .filter(|sb| {
-            (sb.sensor.1 <= y && sb.sensor.1.checked_add_unsigned(sb.dist()).unwrap() > y)
-                || (sb.sensor.1 >= y && sb.sensor.1.checked_sub_unsigned(sb.dist()).unwrap() < y)
+        .filter_map(|sb| {
+            if sb.beacon.1 == y {
+                known_beacons.insert(sb.beacon.0);
+            }
+            let range = sb.x_range_at_y(y);
+            (!range.is_empty()).then_some(range)
         })
         .collect();
-
-    let mut x = min_x;
-    while x < max_x + 1 {
-        let mut min_dist = u32::MAX;
-        for i in 0..can_influence.len() {
-            let item = can_influence[i];
-            let d = dist(item.sensor, (x, y));
-            if item.dist() >= d {
-                // Move the sensor to the front, we're likely to find it again
-                can_influence.swap(0, i);
-                count += u32::from((x, y) != item.beacon);
-                min_dist = 1;
-                break;
-            } else {
-                min_dist = min_dist.min(d - item.dist());
-            }
+    ranges.sort_unstable_by_key(|range| range.start);
+    let mut i = 1;
+    let mut j = 0;
+    while i < ranges.len() {
+        if ranges[j].end >= ranges[i].start {
+            ranges[j].end = cmp::max(ranges[i].end, ranges[j].end);
+        } else {
+            j += 1;
+            ranges[j] = ranges[i].clone();
         }
-
-        x = x.checked_add_unsigned(min_dist).unwrap();
+        i += 1;
     }
-    count
+    ranges.truncate(j + 1);
+    let res: u32 = ranges
+        .iter()
+        .map(|range| range.end.abs_diff(range.start))
+        .sum();
+    res - known_beacons.len() as u32
 }
 
 pub fn part_1(items: &[SensorBeacon]) -> u32 {
@@ -92,4 +88,38 @@ fn dist(lhs: Point, rhs: Point) -> u32 {
     lhs.0.abs_diff(rhs.0) + lhs.1.abs_diff(rhs.1)
 }
 
+trait SignedUnsigned {
+    type Unsigned;
+    fn sub_unsigned(self, other: Self::Unsigned) -> Self;
+    fn add_unsigned(self, other: Self::Unsigned) -> Self;
+}
+
+impl SignedUnsigned for i32 {
+    type Unsigned = u32;
+    #[inline(always)]
+    fn sub_unsigned(self, other: u32) -> Self {
+        if cfg!(debug_assertions) {
+            self.checked_sub_unsigned(other).unwrap()
+        } else {
+            self.wrapping_sub_unsigned(other)
+        }
+    }
+
+    #[inline(always)]
+    fn add_unsigned(self, other: Self::Unsigned) -> Self {
+        if cfg!(debug_assertions) {
+            self.checked_add_unsigned(other).unwrap()
+        } else {
+            self.wrapping_add_unsigned(other)
+        }
+    }
+}
+
 super::day_test! {part_1 == 4748135}
+
+#[test]
+fn test_demo_1() {
+    let input = super::day_test!(@demo_input);
+    let input = generator(&input);
+    assert_eq!(count_non_beacons_at_y(&input, 10), 26);
+}
