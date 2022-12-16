@@ -57,7 +57,7 @@ fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
     }
 
     let mut count = 0;
-    let can_influence: Vec<_> = items
+    let mut can_influence: Vec<_> = items
         .iter()
         .copied()
         .filter(|sb| {
@@ -66,11 +66,14 @@ fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
         })
         .collect();
     for x in min_x..=max_x {
-        for item in &can_influence {
+        for i in 0..can_influence.len() {
+            let item = can_influence[i];
             if (x, y) == item.beacon {
                 continue;
             }
             if item.is_within_range((x, y)) {
+                // Move the sensor to the front, we're likely to find it again
+                can_influence.swap(0, i);
                 count += 1;
                 break;
             }
