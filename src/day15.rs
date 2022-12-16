@@ -1,6 +1,6 @@
 pub(crate) use super::unimplemented_part as part_2;
-use ahash::{HashSet, HashSetExt};
 use std::cmp;
+use std::collections::BTreeSet;
 use std::ops::Range;
 
 type Point = (i32, i32);
@@ -49,7 +49,7 @@ pub fn generator(s: &str) -> Vec<SensorBeacon> {
 }
 
 fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
-    let mut known_beacons = HashSet::with_capacity(16);
+    let mut known_beacons = BTreeSet::new();
     let mut ranges: Vec<_> = items
         .iter()
         .filter_map(|sb| {
