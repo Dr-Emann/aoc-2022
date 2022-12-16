@@ -1,5 +1,4 @@
 pub(crate) use super::unimplemented_part as part_2;
-use ahash::HashSet;
 
 type Point = (i32, i32);
 
@@ -11,10 +10,6 @@ pub struct SensorBeacon {
 }
 
 impl SensorBeacon {
-    fn is_within_range(self, other: Point) -> bool {
-        self.dist() >= dist(self.sensor, other)
-    }
-
     pub fn dist(self) -> u32 {
         self.dist
     }
@@ -67,24 +62,20 @@ fn count_non_beacons_at_y(items: &[SensorBeacon], y: i32) -> u32 {
         })
         .collect();
 
-    let known_beacons: HashSet<Point> = can_influence.iter().map(|sb| sb.beacon).collect();
     let mut x = min_x;
     while x < max_x + 1 {
-        let mut min_dist = 1;
-        if !known_beacons.contains(&(x, y)) {
-            min_dist = u32::MAX;
-            for i in 0..can_influence.len() {
-                let item = can_influence[i];
-                let d = dist(item.sensor, (x, y));
-                if item.dist() >= d {
-                    // Move the sensor to the front, we're likely to find it again
-                    can_influence.swap(0, i);
-                    count += 1;
-                    min_dist = 1;
-                    break;
-                } else {
-                    min_dist = min_dist.min(d - item.dist());
-                }
+        let mut min_dist = u32::MAX;
+        for i in 0..can_influence.len() {
+            let item = can_influence[i];
+            let d = dist(item.sensor, (x, y));
+            if item.dist() >= d {
+                // Move the sensor to the front, we're likely to find it again
+                can_influence.swap(0, i);
+                count += u32::from((x, y) != item.beacon);
+                min_dist = 1;
+                break;
+            } else {
+                min_dist = min_dist.min(d - item.dist());
             }
         }
 
