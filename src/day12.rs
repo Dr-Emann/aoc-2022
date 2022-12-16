@@ -1,6 +1,6 @@
 use ahash::{HashMap, HashMapExt};
-use std::collections::{BTreeMap, BinaryHeap};
-use std::{cmp, iter};
+use std::collections::BTreeMap;
+use std::iter;
 
 use crate::grid::NlGrid;
 
