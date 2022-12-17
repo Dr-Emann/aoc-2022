@@ -21,14 +21,14 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn inspect_items(&mut self, lcm_modulus: Worry, reduce_worry: bool) {
+    fn inspect_items<const REDUCE_WORRY: bool>(&mut self, lcm_modulus: Worry) {
         for item in &mut self.worries {
             match self.op {
                 Op::Add(x) => *item += x,
                 Op::Mul(x) => *item *= x,
                 Op::Square => *item *= *item,
             }
-            if reduce_worry {
+            if REDUCE_WORRY {
                 *item /= 3;
             }
             *item %= lcm_modulus;
@@ -69,11 +69,11 @@ impl Monkeys {
         }
     }
 
-    fn step(&mut self, reduce_worry: bool) {
+    fn step<const REDUCE_WORRY: bool>(&mut self) {
         let lcm_modulus = self.lcm_modulus;
         for i in 0..self.monkeys.len() {
             let (monkey, (true_dest, false_dest)) = self.get_with_destinations(i);
-            monkey.inspect_items(lcm_modulus, reduce_worry);
+            monkey.inspect_items::<REDUCE_WORRY>(lcm_modulus);
 
             let (true_items, false_items) =
                 partition(&mut monkey.worries, |&w| w % monkey.divisible_check == 0);
@@ -202,7 +202,7 @@ pub fn part_1(monkeys: &Monkeys) -> u64 {
     let mut monkeys = monkeys.clone();
 
     for _ in 0..20 {
-        monkeys.step(true);
+        monkeys.step::<true>();
     }
 
     monkeys.monkey_business()
@@ -212,7 +212,7 @@ pub fn part_2(monkeys: &Monkeys) -> u64 {
     let mut monkeys = monkeys.clone();
 
     for _ in 0..10_000 {
-        monkeys.step(false);
+        monkeys.step::<false>();
     }
 
     monkeys.monkey_business()
