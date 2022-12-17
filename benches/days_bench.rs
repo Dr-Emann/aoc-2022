@@ -26,6 +26,7 @@ pub fn full_bench(c: &mut Criterion) {
             })
         });
     }
+    group.finish();
 }
 
 criterion_group!(benches, full_bench);

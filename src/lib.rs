@@ -115,7 +115,7 @@ fn stringify_res<T: Display, E: Display>(r: Result<T, E>) -> String {
 
 macro_rules! days {
     ($($mod_name:ident),*) => {
-        $(mod $mod_name;)*
+        $(pub mod $mod_name;)*
 
         pub const DAYS: [Option<fn(&str, bool)>; 25] = {
             let mut result: [Option<fn(&str, bool)>; 25] = [None; 25];
