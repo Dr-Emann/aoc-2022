@@ -1,0 +1,225 @@
+use ahash::{HashMap, HashMapExt, HashSet};
+use bitvec::prelude::*;
+use core::fmt;
+use std::fmt::Write;
+use std::ops::{Index, IndexMut};
+
+type Idx = u8;
+#[derive(Debug, Copy, Clone)]
+pub struct Node {
+    flow: u8,
+}
+
+#[derive(Default, Debug)]
+pub struct Input {
+    nodes: Vec<Node>,
+    edges: HashSet<(Idx, Idx)>,
+    distances: Vec<u8>,
+}
+
+impl Input {
+    fn add_node(&mut self, node: Node) -> Idx {
+        let idx = self.nodes.len().try_into().unwrap();
+        self.nodes.push(node);
+        idx
+    }
+
+    fn add_edge(&mut self, from: Idx, to: Idx) {
+        let pair = if from < to { (from, to) } else { (to, from) };
+        self.edges.insert(pair);
+    }
+
+    fn dist_between(&self, from: Idx, to: Idx) -> u8 {
+        self.distances[usize::from(from) * self.nodes.len() + usize::from(to)]
+    }
+
+    fn floyd_warshall(&mut self) {
+        assert!(self.distances.is_empty());
+        let node_count = self.nodes.len();
+        let node_idx_range = 0..u8::try_from(node_count).unwrap();
+
+        let mut dist = vec![u8::MAX; node_count * node_count];
+        let idx = |i, j| usize::from(i) * node_count + usize::from(j);
+
+        for &(from, to) in &self.edges {
+            dist[idx(from, to)] = 1;
+            dist[idx(to, from)] = 1;
+        }
+
+        for node_idx in node_idx_range.clone() {
+            dist[idx(node_idx, node_idx)] = 0;
+        }
+
+        for k in node_idx_range.clone() {
+            for i in node_idx_range.clone() {
+                for j in node_idx_range.clone() {
+                    let piecewise_dist = dist[idx(i, k)].saturating_add(dist[idx(k, j)]);
+
+                    if dist[idx(i, j)] > piecewise_dist {
+                        dist[idx(i, j)] = piecewise_dist;
+                    }
+                }
+            }
+        }
+        self.distances = dist;
+    }
+}
+
+impl Index<Idx> for Input {
+    type Output = Node;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        &self.nodes[usize::from(index)]
+    }
+}
+
+impl IndexMut<Idx> for Input {
+    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
+        &mut self.nodes[usize::from(index)]
+    }
+}
+
+pub fn generator(s: &str) -> Input {
+    let mut nodes_by_name = HashMap::<ValveName, Idx>::with_capacity(64);
+    let mut input = Input::default();
+    // Ensure AA is the first node
+    nodes_by_name.insert(
+        ValveName(b'A', b'A'),
+        input.add_node(Node { flow: u8::MAX }),
+    );
+    for line in s.lines() {
+        let line = line.strip_prefix("Valve ").unwrap();
+        let valve_name = ValveName::from_bytes(line.as_bytes());
+        let line = &line[2..];
+        let line = line.strip_prefix(" has flow rate=").unwrap();
+        let (rate, line) = line
+            .split_once("; tunnels lead to valves ")
+            .or_else(|| line.split_once("; tunnel leads to valve "))
+            .unwrap();
+        let flow: u8 = rate.parse().unwrap();
+        let links = line
+            .split(", ")
+            .map(|n| ValveName::from_bytes(n.as_bytes()));
+
+        let idx = if let Some(&idx) = nodes_by_name.get(&valve_name) {
+            input[idx].flow = flow;
+            idx
+        } else {
+            let idx = input.add_node(Node { flow });
+            nodes_by_name.insert(valve_name, idx);
+            idx
+        };
+        links.for_each(|link| {
+            let link_idx = *nodes_by_name
+                .entry(link)
+                .or_insert_with(|| input.add_node(Node { flow: u8::MAX }));
+            input.add_edge(idx, link_idx);
+        });
+    }
+    debug_assert!(input.nodes.iter().all(|node| node.flow < u8::MAX));
+
+    input.floyd_warshall();
+    input
+}
+
+type NodeSet = BitArr!(for 64);
+
+struct QueueItem {
+    time_remaining: u8,
+    current: Idx,
+    activated_links: NodeSet,
+    released_pressure: u16,
+}
+
+fn pressure_releases<F>(input: &Input, total_time: u8, mut f: F)
+where
+    F: FnMut(NodeSet, u16),
+{
+    let mut queue = Vec::with_capacity(256);
+    assert!(input.nodes.len() < NodeSet::ZERO.len());
+
+    let mut links = NodeSet::ZERO;
+    for (i, mut bit) in links.iter_mut().enumerate() {
+        let should_visit = input.nodes.get(i).map_or(false, |node| node.flow > 0);
+        *bit = !should_visit;
+    }
+    let mask = !links;
+    queue.push(QueueItem {
+        time_remaining: total_time,
+        current: 0,
+        activated_links: links,
+        released_pressure: 0,
+    });
+
+    while let Some(item) = queue.pop() {
+        f(item.activated_links & mask, item.released_pressure);
+        for next_node in item.activated_links.iter_zeros() {
+            let next_idx = next_node as Idx;
+            // One minute to open the valve
+            let time_remaining = item
+                .time_remaining
+                .saturating_sub(input.dist_between(item.current, next_idx) + 1);
+            if time_remaining == 0 {
+                continue;
+            }
+            let released_pressure = item.released_pressure
+                + u16::from(input[next_idx].flow) * u16::from(time_remaining);
+            let mut activated_links = item.activated_links;
+            activated_links.set(next_node, true);
+            queue.push(QueueItem {
+                time_remaining,
+                current: next_idx,
+                activated_links,
+                released_pressure,
+            });
+        }
+    }
+}
+
+pub fn part_1(input: &Input) -> u16 {
+    let mut max_pressure = 0;
+    pressure_releases(input, 30, |_, pressure| {
+        max_pressure = max_pressure.max(pressure)
+    });
+    max_pressure
+}
+
+pub fn part_2(input: &Input) -> u16 {
+    let mut max_pressures: HashMap<NodeSet, u16> = HashMap::with_capacity(4096);
+    pressure_releases(input, 26, |nodes, pressure| {
+        let dst = max_pressures.entry(nodes).or_default();
+        *dst = (*dst).max(pressure);
+    });
+
+    let mut max_pressure = 0;
+    for (&my_nodes, &my_pressure) in &max_pressures {
+        for (&elephant_nodes, &elephant_pressure) in &max_pressures {
+            if (my_nodes & elephant_nodes).not_any() {
+                max_pressure = max_pressure.max(my_pressure + elephant_pressure);
+            }
+        }
+    }
+    max_pressure
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ValveName(u8, u8);
+
+impl ValveName {
+    fn from_bytes(bytes: &[u8]) -> Self {
+        Self(bytes[0], bytes[1])
+    }
+}
+
+impl fmt::Debug for ValveName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char(self.0 as char)?;
+        f.write_char(self.1 as char)?;
+        Ok(())
+    }
+}
+
+super::day_test! {demo_1 == 1651}
+super::day_test! {demo_2 == 1707}
+super::day_test! {part_1 == 1862}
+super::day_test! {part_2 == 2422}
