@@ -1,4 +1,4 @@
-pub(crate) use super::unimplemented_part as part_2;
+use ahash::{HashMap, HashMapExt};
 use std::cmp;
 use std::collections::BTreeSet;
 use std::ops::Range;
@@ -84,6 +84,69 @@ pub fn part_1(items: &[SensorBeacon]) -> u32 {
     count_non_beacons_at_y(items, 2000000)
 }
 
+fn find_empty_spot<const MAX_XY: i32>(items: &[SensorBeacon]) -> Point {
+    let range = 0..=MAX_XY;
+    let mut down_slope_intercept_counts = HashMap::<i32, u32>::with_capacity(items.len());
+    let mut up_slope_intercept_counts = HashMap::<i32, u32>::with_capacity(items.len());
+
+    items.iter().for_each(|item| {
+        let up_slope_intercept_center = item.sensor.1 - item.sensor.0;
+        let down_slope_intercept_center = item.sensor.1 + item.sensor.0;
+
+        let extra_dist = item.dist + 1;
+
+        *up_slope_intercept_counts
+            .entry(up_slope_intercept_center.add_unsigned(extra_dist))
+            .or_default() += 1;
+        *up_slope_intercept_counts
+            .entry(up_slope_intercept_center.sub_unsigned(extra_dist))
+            .or_default() += 1;
+
+        *down_slope_intercept_counts
+            .entry(down_slope_intercept_center.add_unsigned(extra_dist))
+            .or_default() += 1;
+        *down_slope_intercept_counts
+            .entry(down_slope_intercept_center.sub_unsigned(extra_dist))
+            .or_default() += 1;
+    });
+    let up_slope_intercepts: Vec<i32> = up_slope_intercept_counts
+        .into_iter()
+        .filter_map(|(y, count)| (count > 1).then_some(y))
+        .collect();
+    let down_slope_intercepts: Vec<i32> = down_slope_intercept_counts
+        .into_iter()
+        .filter_map(|(y, count)| (count > 1).then_some(y))
+        .collect();
+
+    for &up_intercept in &up_slope_intercepts {
+        for &down_intercept in &down_slope_intercepts {
+            let intersection = (
+                (down_intercept - up_intercept) / 2,
+                (down_intercept + up_intercept) / 2,
+            );
+            if !range.contains(&intersection.0) || !range.contains(&intersection.1) {
+                continue;
+            }
+            if items
+                .iter()
+                .all(|sb| dist(sb.sensor, intersection) > sb.dist)
+            {
+                return intersection;
+            }
+        }
+    }
+    panic!("Expected an empty intersection")
+}
+
+fn empty_spot_frequency<const MAX_XY: i32>(items: &[SensorBeacon]) -> i64 {
+    let point = find_empty_spot::<MAX_XY>(items);
+    i64::from(point.0) * 4_000_000 + i64::from(point.1)
+}
+
+pub fn part_2(items: &[SensorBeacon]) -> i64 {
+    empty_spot_frequency::<4_000_000>(items)
+}
+
 fn dist(lhs: Point, rhs: Point) -> u32 {
     lhs.0.abs_diff(rhs.0) + lhs.1.abs_diff(rhs.1)
 }
@@ -116,10 +179,19 @@ impl SignedUnsigned for i32 {
 }
 
 super::day_test! {part_1 == 4748135}
+super::day_test! {part_2 == 13743542639657}
 
 #[test]
 fn test_demo_1() {
     let input = super::day_test!(@demo_input);
     let input = generator(&input);
     assert_eq!(count_non_beacons_at_y(&input, 10), 26);
+}
+
+#[test]
+fn test_demo_2() {
+    let input = super::day_test!(@demo_input);
+    let input = generator(&input);
+    assert_eq!(find_empty_spot::<20>(&input), (14, 11));
+    assert_eq!(empty_spot_frequency::<20>(&input), 56000011);
 }
