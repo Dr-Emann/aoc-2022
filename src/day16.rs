@@ -1,6 +1,7 @@
 use ahash::{HashMap, HashMapExt, HashSet};
 use bitvec::prelude::*;
 use core::fmt;
+use std::cmp;
 use std::fmt::Write;
 use std::ops::{Index, IndexMut};
 
@@ -15,6 +16,7 @@ pub struct Input {
     nodes: Vec<Node>,
     edges: HashSet<(Idx, Idx)>,
     distances: Vec<u8>,
+    start: Idx,
 }
 
 impl Input {
@@ -30,6 +32,7 @@ impl Input {
     }
 
     fn dist_between(&self, from: Idx, to: Idx) -> u8 {
+        let (from, to) = if from < to { (from, to) } else { (to, from) };
         self.distances[usize::from(from) * self.nodes.len() + usize::from(to)]
     }
 
@@ -80,13 +83,7 @@ impl IndexMut<Idx> for Input {
 }
 
 pub fn generator(s: &str) -> Input {
-    let mut nodes_by_name = HashMap::<ValveName, Idx>::with_capacity(64);
-    let mut input = Input::default();
-    // Ensure AA is the first node
-    nodes_by_name.insert(
-        ValveName(b'A', b'A'),
-        input.add_node(Node { flow: u8::MAX }),
-    );
+    let mut nodes = Vec::<(u8, ValveName, Vec<ValveName>)>::with_capacity(64);
     for line in s.lines() {
         let line = line.strip_prefix("Valve ").unwrap();
         let valve_name = ValveName::from_bytes(line.as_bytes());
@@ -101,28 +98,28 @@ pub fn generator(s: &str) -> Input {
             .split(", ")
             .map(|n| ValveName::from_bytes(n.as_bytes()));
 
-        let idx = if let Some(&idx) = nodes_by_name.get(&valve_name) {
-            input[idx].flow = flow;
-            idx
-        } else {
-            let idx = input.add_node(Node { flow });
-            nodes_by_name.insert(valve_name, idx);
-            idx
-        };
-        links.for_each(|link| {
-            let link_idx = *nodes_by_name
-                .entry(link)
-                .or_insert_with(|| input.add_node(Node { flow: u8::MAX }));
-            input.add_edge(idx, link_idx);
-        });
+        nodes.push((flow, valve_name, links.collect()));
     }
-    debug_assert!(input.nodes.iter().all(|node| node.flow < u8::MAX));
+    nodes.sort_unstable_by_key(|n| cmp::Reverse(n.0));
+    let mut input = Input::default();
+    let mut node_idx_by_name = HashMap::with_capacity(64);
+    for &(flow, name, _) in &nodes {
+        node_idx_by_name.insert(name, input.add_node(Node { flow }));
+    }
+    for (i, (_flow, _name, links)) in nodes.iter().enumerate() {
+        let idx = i as Idx;
+        for link in links {
+            input.add_edge(idx, node_idx_by_name[link]);
+        }
+    }
+    input.start = node_idx_by_name[&ValveName(b'A', b'A')];
 
     input.floyd_warshall();
+
     input
 }
 
-type NodeSet = BitArr!(for 64);
+type NodeSet = BitArr!(for 16);
 
 struct QueueItem {
     time_remaining: u8,
@@ -135,25 +132,23 @@ fn pressure_releases<F>(input: &Input, total_time: u8, mut f: F)
 where
     F: FnMut(NodeSet, u16),
 {
+    let working_nodes = input.nodes.partition_point(|n| n.flow > 0);
     let mut queue = Vec::with_capacity(256);
-    assert!(input.nodes.len() < NodeSet::ZERO.len());
+    assert!(working_nodes < NodeSet::ZERO.len());
 
-    let mut links = NodeSet::ZERO;
-    for (i, mut bit) in links.iter_mut().enumerate() {
-        let should_visit = input.nodes.get(i).map_or(false, |node| node.flow > 0);
-        *bit = !should_visit;
-    }
-    let mask = !links;
     queue.push(QueueItem {
         time_remaining: total_time,
-        current: 0,
-        activated_links: links,
+        current: input.start,
+        activated_links: NodeSet::ZERO,
         released_pressure: 0,
     });
 
     while let Some(item) = queue.pop() {
-        f(item.activated_links & mask, item.released_pressure);
-        for next_node in item.activated_links.iter_zeros() {
+        f(item.activated_links, item.released_pressure);
+        for next_node in 0..working_nodes {
+            if item.activated_links[next_node] {
+                continue;
+            }
             let next_idx = next_node as Idx;
             // One minute to open the valve
             let time_remaining = item
