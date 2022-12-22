@@ -186,9 +186,17 @@ pub fn part_2(input: &Input) -> u16 {
         *dst = (*dst).max(pressure);
     });
 
+    let mut max_pressures: Vec<(NodeSet, u16)> = max_pressures.into_iter().collect();
+    max_pressures.sort_unstable_by_key(|&(_, pressure)| cmp::Reverse(pressure));
+
     let mut max_pressure = 0;
-    for (&my_nodes, &my_pressure) in &max_pressures {
-        for (&elephant_nodes, &elephant_pressure) in &max_pressures {
+    for (i, &(my_nodes, my_pressure)) in max_pressures.iter().enumerate() {
+        for &(elephant_nodes, elephant_pressure) in &max_pressures[i + 1..] {
+            // Pressures are sorted in decreasing pressures, if this can't get enough pressure to beat the max,
+            // no further one will either
+            if my_pressure + elephant_pressure < max_pressure {
+                break;
+            }
             if (my_nodes & elephant_nodes).not_any() {
                 max_pressure = max_pressure.max(my_pressure + elephant_pressure);
             }
