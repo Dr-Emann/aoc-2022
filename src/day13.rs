@@ -105,11 +105,23 @@ pub fn part_1(messages: &[Vec<Item>]) -> usize {
 pub fn part_2(messages: &[Vec<Item>]) -> usize {
     let divider_1 = vec![Item::List(vec![Item::Num(2)])];
     let divider_2 = vec![Item::List(vec![Item::Num(6)])];
-    let mut messages = messages.to_vec();
-    messages.sort_unstable();
-    let idx1 = messages.binary_search(&divider_1).unwrap_err() + 1;
+
+    let mut num_lt_divider_1 = 0;
+    let mut num_lt_divider_2 = 0;
+    for message in messages {
+        if message < &divider_1 {
+            num_lt_divider_1 += 1;
+        } else if message < &divider_2 {
+            num_lt_divider_2 += 1;
+        }
+    }
+
+    num_lt_divider_2 += num_lt_divider_1;
+
+    // 1 indexed
+    let idx1 = num_lt_divider_1 + 1;
     // 1 indexed, plus the position the first divider would have taken
-    let idx2 = messages.binary_search(&divider_2).unwrap_err() + 2;
+    let idx2 = num_lt_divider_2 + 2;
 
     idx1 * idx2
 }
