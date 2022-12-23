@@ -114,9 +114,10 @@ struct Jets<'a>(&'a [u8]);
 impl Jets<'_> {
     fn next_x(&self, idx: &mut u32) -> i8 {
         let i = *idx as usize;
-        *idx += 1;
-        if *idx == self.0.len() as u32 {
+        if i + 1 == self.0.len() {
             *idx = 0;
+        } else {
+            *idx += 1;
         }
         if self.0[i] == b'<' {
             -1
