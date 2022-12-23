@@ -182,19 +182,20 @@ pub fn part_2(s: &str) -> u64 {
     let mut game = Game::default();
     let jets = Jets(s.as_bytes());
 
-    for _ in 0..500 {
+    let mut i = 500;
+    for _ in 0..i {
         game.drop(jets);
     }
 
-    let mut games = HashMap::with_capacity(1024);
+    let mut games = HashMap::with_capacity(2048);
 
-    let mut i = 500;
     let (loop_len, loop_height) = loop {
-        match games.entry((
+        let key = (
             game.piece,
             game.jet_idx,
-            game.board.bits[game.board.bits.len() - (100 * COLUMNS)..].to_bitvec(),
-        )) {
+            game.board.bits[game.board.bits.len() - (50 * COLUMNS)..].to_bitvec(),
+        );
+        match games.entry(key) {
             Entry::Occupied(e) => {
                 let &(old_i, old_height) = e.get();
                 break (i - old_i, game.board.height() - old_height);
