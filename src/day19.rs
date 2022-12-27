@@ -147,7 +147,7 @@ fn best_blueprint_score(blueprint: &Blueprint, minutes: u16) -> u16 {
     while let Some(state) = queue.pop() {
         best_score = best_score.max(state.geode.count + state.geode.rate * state.minutes_left);
 
-        // TODO: Quick exit if building geodes every minute can't even beat best
+        // Quick exit if building geodes every minute can't even beat best
         if state.geode.count
             + (state.geode.rate + (state.minutes_left + 1) / 2) * state.minutes_left
             < best_score
