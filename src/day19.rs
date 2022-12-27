@@ -1,12 +1,12 @@
 use std::cmp;
 
 pub struct Blueprint {
-    ore_robot_ore_cost: u16,
-    clay_robot_ore_cost: u16,
-    obsidian_robot_ore_cost: u16,
-    obsidian_robot_clay_cost: u16,
-    geode_robot_ore_cost: u16,
-    geode_robot_obsidian_cost: u16,
+    ore_robot_ore_cost: u32,
+    clay_robot_ore_cost: u32,
+    obsidian_robot_ore_cost: u32,
+    obsidian_robot_clay_cost: u32,
+    geode_robot_ore_cost: u32,
+    geode_robot_obsidian_cost: u32,
 }
 
 pub fn generator(s: &str) -> Vec<Blueprint> {
@@ -59,7 +59,7 @@ pub fn generator(s: &str) -> Vec<Blueprint> {
 }
 
 pub fn part_1(blueprints: &[Blueprint]) -> u32 {
-    const MINUTES: u16 = 24;
+    const MINUTES: u32 = 24;
 
     let mut result = 0;
     for (i, blueprint) in blueprints.iter().enumerate() {
@@ -72,7 +72,7 @@ pub fn part_1(blueprints: &[Blueprint]) -> u32 {
 }
 
 pub fn part_2(blueprints: &[Blueprint]) -> u32 {
-    const MINUTES: u16 = 32;
+    const MINUTES: u32 = 32;
 
     let mut result = 1;
     for blueprint in blueprints.iter().take(3) {
@@ -85,12 +85,12 @@ pub fn part_2(blueprints: &[Blueprint]) -> u32 {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 struct RateCount {
-    rate: u16,
-    count: u16,
+    rate: u32,
+    count: u32,
 }
 
 impl RateCount {
-    fn after_minutes(self, minutes: u16) -> Self {
+    fn after_minutes(self, minutes: u32) -> Self {
         Self {
             rate: self.rate,
             count: self.count + self.rate * minutes,
@@ -100,7 +100,7 @@ impl RateCount {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct State {
-    minutes_left: u16,
+    minutes_left: u32,
 
     ore: RateCount,
     clay: RateCount,
@@ -109,7 +109,7 @@ struct State {
 }
 
 impl State {
-    fn new(minutes_left: u16) -> Self {
+    fn new(minutes_left: u32) -> Self {
         Self {
             minutes_left,
 
@@ -120,7 +120,7 @@ impl State {
         }
     }
 
-    fn after_minutes(&self, minutes: u16) -> Self {
+    fn after_minutes(&self, minutes: u32) -> Self {
         Self {
             minutes_left: self.minutes_left - minutes,
             ore: self.ore.after_minutes(minutes),
@@ -131,7 +131,7 @@ impl State {
     }
 }
 
-fn best_blueprint_score(blueprint: &Blueprint, minutes: u16) -> u16 {
+fn best_blueprint_score(blueprint: &Blueprint, minutes: u32) -> u32 {
     let mut best_score = 0;
 
     let most_needed_ore = blueprint
