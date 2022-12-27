@@ -1,14 +1,12 @@
-use ahash::{HashSet, HashSetExt};
+use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use bitvec::BitArr;
 use std::collections::BTreeMap;
 
 type N = u16;
 type Pos = [N; 2];
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct Storm {
-    i: N,
-    start: N,
-}
+#[derive(Debug, Copy, Clone, Default)]
+struct StormLine(BitArr!(for 128));
 
 #[derive(Debug, Clone)]
 pub struct Field {
@@ -18,10 +16,10 @@ pub struct Field {
     start_x: N,
     end_x: N,
 
-    up: Vec<Storm>,
-    down: Vec<Storm>,
-    left: Vec<Storm>,
-    right: Vec<Storm>,
+    up: HashMap<N, StormLine>,
+    down: HashMap<N, StormLine>,
+    left: HashMap<N, StormLine>,
+    right: HashMap<N, StormLine>,
 }
 
 pub fn generator(s: &str) -> Field {
@@ -38,30 +36,25 @@ pub fn generator(s: &str) -> Field {
         N::try_from(last_line.find('.').unwrap() - 1).unwrap()
     };
     let mut y = 0;
-    let mut up = Vec::new();
-    let mut down = Vec::new();
-    let mut left = Vec::new();
-    let mut right = Vec::new();
+    let mut up = HashMap::<N, StormLine>::new();
+    let mut down = HashMap::<N, StormLine>::new();
+    let mut left = HashMap::<N, StormLine>::new();
+    let mut right = HashMap::<N, StormLine>::new();
     for line in lines {
         let line = &line[1..line.len() - 1];
         for (x, ch) in line.bytes().enumerate() {
             let x = x as N;
             match ch {
                 b'.' => continue,
-                b'^' => up.push(Storm { i: x, start: y }),
-                b'v' => down.push(Storm { i: x, start: y }),
-                b'<' => left.push(Storm { i: y, start: x }),
-                b'>' => right.push(Storm { i: y, start: x }),
+                b'^' => up.entry(x).or_default().0.set(y as usize, true),
+                b'v' => down.entry(x).or_default().0.set(y as usize, true),
+                b'<' => left.entry(y).or_default().0.set(x as usize, true),
+                b'>' => right.entry(y).or_default().0.set(x as usize, true),
                 _ => panic!("Unknown map symbol {ch}"),
             }
         }
         y += 1;
     }
-
-    up.sort_unstable();
-    down.sort_unstable();
-    left.sort_unstable();
-    right.sort_unstable();
 
     Field {
         width: width.try_into().unwrap(),
@@ -169,49 +162,50 @@ impl Field {
         let horiz_turn_offset = turn % self.width;
 
         {
-            let up_start = self.up.partition_point(|storm| storm.i < x);
-            for storm in &self.up[up_start..] {
-                if storm.i != x {
-                    break;
-                }
-                if (storm.start + self.height - vert_turn_offset) % self.height == y {
-                    return true;
-                }
+            let orig_y = (y + vert_turn_offset) % self.height;
+            if self
+                .up
+                .get(&x)
+                .map_or(false, |storms| storms.0[orig_y as usize])
+            {
+                return true;
             }
         }
         {
-            let down_start = self.down.partition_point(|storm| storm.i < x);
-            for storm in &self.down[down_start..] {
-                if storm.i != x {
-                    break;
-                }
-                if (storm.start + vert_turn_offset) % self.height == y {
-                    return true;
-                }
+            let orig_y = (y + self.height - vert_turn_offset) % self.height;
+            if self
+                .down
+                .get(&x)
+                .map_or(false, |storms| storms.0[orig_y as usize])
+            {
+                return true;
             }
         }
         {
-            let left_start = self.left.partition_point(|storm| storm.i < y);
-            for storm in &self.left[left_start..] {
-                if storm.i != y {
-                    break;
-                }
-                if (storm.start + self.width - horiz_turn_offset) % self.width == x {
-                    return true;
-                }
+            let orig_x = (x + horiz_turn_offset) % self.width;
+            if self
+                .left
+                .get(&y)
+                .map_or(false, |storms| storms.0[orig_x as usize])
+            {
+                return true;
             }
         }
         {
-            let right_start = self.right.partition_point(|storm| storm.i < y);
-            for storm in &self.right[right_start..] {
-                if storm.i != y {
-                    break;
-                }
-                if (storm.start + horiz_turn_offset) % self.width == x {
-                    return true;
-                }
+            let orig_x = (x + self.width - horiz_turn_offset) % self.width;
+            if self
+                .right
+                .get(&y)
+                .map_or(false, |storms| storms.0[orig_x as usize])
+            {
+                return true;
             }
         }
         false
     }
 }
+
+super::day_test! {demo_1 == 18}
+super::day_test! {demo_2 == 54}
+super::day_test! {part_1 == 283}
+super::day_test! {part_2 == 883}
